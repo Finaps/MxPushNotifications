@@ -49,25 +49,26 @@ define([
         _platform: null,
         _initIntervalHandle: null,
         _push: null,
+        Refresh: null,
 
         // dojo.declare.constructor is called to construct the widget instance. Implement to initialize non-primitive properties.
-        constructor: function() {
+        constructor: function () {
             window.logger.level(window.logger.ALL);
         },
 
         // dijit._WidgetBase.postCreate is called after constructing the widget. Implement to do extra setup work.
-        postCreate: function() {
+        postCreate: function () {
             logger.debug(".postCreate");
 
             this.domNode.innerHTML = this.templateString;
         },
 
-        update: function(obj, callback) {
+        update: function (obj, callback) {
             logger.debug(".update");
 
             if (typeof cordova !== "undefined" && typeof window.PushNotification !== "undefined") {
                 if (!this._registrationId) {
-                    this.initializePushNotifications(); 
+                    this.initializePushNotifications();
                 }
             } else {
                 logger.debug("PushNotifications plugin not available; this plugin should be included during the build.");
@@ -76,42 +77,42 @@ define([
             mendix.lang.nullExec(callback);
         },
 
-        initializePushNotifications: function() {
+        initializePushNotifications: function () {
             logger.debug(".initializePushNotifications");
 
             all({
                 gcm: this.initGCMSettings()
             })
-            .then(dojoLang.hitch(this, this.initializePushPlugin))
-            .then(dojoLang.hitch(this, function() {
-                // We've registered our device Successfully. We can remove the retry interval, if it's set.
-                if (typeof this._initIntervalHandle === "number") {
-                    window.clearInterval(this._initIntervalHandle);
-                    this._initIntervalHandle = null;
-                }
-            }))
-            .otherwise(dojoLang.hitch(this, function (err) {
-                logger.error(err);
+                .then(dojoLang.hitch(this, this.initializePushPlugin))
+                .then(dojoLang.hitch(this, function () {
+                    // We've registered our device Successfully. We can remove the retry interval, if it's set.
+                    if (typeof this._initIntervalHandle === "number") {
+                        window.clearInterval(this._initIntervalHandle);
+                        this._initIntervalHandle = null;
+                    }
+                }))
+                .otherwise(dojoLang.hitch(this, function (err) {
+                    logger.error(err);
 
-                // We were not able to register our device. Let's set up an interval that keeps trying.
-                if (typeof this._initIntervalHandle !== "number") {
-                    this._initIntervalHandle = window.setInterval(dojoLang.hitch(this, this.initializePushNotifications), this.INITIALIZATION_INTERVAL_MS);
-                }
-            }));
+                    // We were not able to register our device. Let's set up an interval that keeps trying.
+                    if (typeof this._initIntervalHandle !== "number") {
+                        this._initIntervalHandle = window.setInterval(dojoLang.hitch(this, this.initializePushNotifications), this.INITIALIZATION_INTERVAL_MS);
+                    }
+                }));
         },
 
-        initGCMSettings: function() {
+        initGCMSettings: function () {
             logger.debug(".initGCMSettings");
 
             var deferred = new Deferred();
 
-            var handleGCMSettings = function(settings, count) {
+            var handleGCMSettings = function (settings, count) {
                 if (settings.length > 0) {
                     logger.debug("Found one or more GCM settings objects. Using the first one.");
 
                     deferred.resolve(settings[0]);
                 } else {
-                    deferred.reject("Could not find a GCM settings object.")
+                    deferred.reject("Could not find a GCM settings object.");
                 }
             };
 
@@ -122,9 +123,9 @@ define([
             */
             try {
                 mx.data.getSlice(this.GCM_SETTINGS_ENTITY,
-                    null,            // No constraints
+                    null, // No constraints
                     {
-                        limit: 0,    // Filter
+                        limit: 0, // Filter
                         offset: 0,
                         sort: []
                     },
@@ -149,7 +150,7 @@ define([
             return deferred.promise;
         },
 
-        initializePushPlugin: function(allSettings) {
+        initializePushPlugin: function (allSettings) {
             logger.debug(".initializePushPlugin");
 
             var deferred = new Deferred();
@@ -179,7 +180,7 @@ define([
 
                 deferred.resolve(this._push);
             } else {
-                deferred.reject("Could not initialize the PushNotifications plugin.")
+                deferred.reject("Could not initialize the PushNotifications plugin.");
             }
 
             return deferred.promise;
@@ -196,7 +197,7 @@ define([
                 .then(dojoLang.hitch(this, this.registerDevice))
                 .otherwise(function (err) {
                     logger.error("Failed to register device: " + err);
-                })
+                });
         },
 
         initializeDeviceRegistration: function () {
@@ -204,14 +205,14 @@ define([
 
             var deferred = new Deferred();
 
-            var createRegistrationEntity = function() {
+            var createRegistrationEntity = function () {
                 // Nothing there. We'll create a new DeviceRegistration object.
                 mx.data.create({
                     entity: this.DEVICE_REGISTRATION_ENTITY,
-                    callback: dojoLang.hitch(this, function(deviceRegistration) {
+                    callback: dojoLang.hitch(this, function (deviceRegistration) {
                         deferred.resolve(deviceRegistration);
                     }),
-                    error: function(e) {
+                    error: function (e) {
                         deferred.reject("Failed to initialize device registration: " + e);
                     }
                 });
@@ -226,36 +227,34 @@ define([
             If it fails, we assume that we are in online mode, and just go ahead and create a DeviceRegistration object.
             */
             try {
-                mx.data.getSlice(this.DEVICE_REGISTRATION_ENTITY,
-                    [{
-                        attribute: this.REGISTRATION_ID_ATTRIBUTE,
-                        operator: "equals",
-                        value: this._registrationId
+                mx.data.getSlice(this.DEVICE_REGISTRATION_ENTITY, [{
+                    attribute: this.REGISTRATION_ID_ATTRIBUTE,
+                    operator: "equals",
+                    value: this._registrationId
                     }], {
-                        offset: 0,
-                        limit: 0,
-                        sort: []
-                    }, dojoLang.hitch(this, function(mxobjs, count) {
-                        if (count === 0) {
-                            dojoLang.hitch(this, createRegistrationEntity)();
-                        } else {
-                            // Found something. We'll re-use it.
-                            deferred.resolve(mxobjs[0]);
-                        }
-                    }), dojoLang.hitch(this, function(e) {
-                        deferred.reject("Failed to get deviceRegistration objects: " + e);
-                    })
-                );
+                    offset: 0,
+                    limit: 0,
+                    sort: []
+                }, dojoLang.hitch(this, function (mxobjs, count) {
+                    if (count === 0) {
+                        dojoLang.hitch(this, createRegistrationEntity)();
+                    } else {
+                        // Found something. We'll re-use it.
+                        deferred.resolve(mxobjs[0]);
+                    }
+                }), dojoLang.hitch(this, function (e) {
+                    deferred.reject("Failed to get deviceRegistration objects: " + e);
+                }));
             } catch (e) {
                 dojoLang.hitch(this, createRegistrationEntity)();
             }
-            
+
             return deferred.promise;
         },
 
         registerDevice: function (deviceRegistration) {
             logger.debug(".registerDevice");
-            
+
             deviceRegistration.set(this.DEVICE_ID_ATTRIBUTE, this._deviceId);
             deviceRegistration.set(this.REGISTRATION_ID_ATTRIBUTE, this._registrationId);
 
@@ -272,7 +271,7 @@ define([
                 callback: dojoLang.hitch(this, function () {
                     logger.debug("Registered device with ID " + deviceRegistration.get(this.REGISTRATION_ID_ATTRIBUTE));
                 }),
-                error: function(e) {
+                error: function (e) {
                     logger.error("Error occurred attempting to register device: " + e);
                 }
             });
@@ -281,23 +280,21 @@ define([
         onPushNotification: function (data) {
             logger.debug(".onPushNotification");
 
-            var cards = document.getElementById("cards");
-            var card = '' +
-                '<div class="alert alert-info alert-dismissible animated fadeInDown" role="alert">' +
-                '<button type="button" class="close" data-dismiss="alert" aria-label="Close" onClick="window.pushWidget.removeAlert(this);">' +
-                '<span aria-hidden="true">&times;</span>' +
-                '</button>' +
-                data.message +
-                '</div>';
-
-            var cardList = cards.childNodes;
-            for(var i = 0; i < cardList.length; i++){
-                cardList[i].className = "alert alert-info alert-dismissible";
-            }
-            cards.innerHTML += card;
+            mx.data.action({
+                params: {
+                    actionname: this.Refresh,
+                    origin: this.mxform
+                },
+                callback: dojoLang.hitch(this, function (obj) {
+                    //none needed
+                }),
+                error: dojoLang.hitch(this, function (error) {
+                    console.log(this.id + ': An error occurred while executing microflow: ' + error.description);
+                })
+            });
 
             this._push.finish(function () {
-                logger.debug('Successfully processed push notification.');
+                logger.debug('Successfully updated push notification.');
             });
         },
 
@@ -305,7 +302,7 @@ define([
             logger.error("Push error: " + e);
         },
 
-        removeAlert: function (e){
+        removeAlert: function (e) {
             e.parentNode.parentNode.removeChild(e.parentNode);
         }
     });
